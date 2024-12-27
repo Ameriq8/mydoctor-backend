@@ -1,7 +1,5 @@
 package models
 
-import "time"
-
 type FacilityType string
 
 const (
@@ -17,7 +15,7 @@ const (
 )
 
 type Facility struct {
-	ID               int64        `json:"id"`
+	BaseModel
 	Name             string       `json:"name"`
 	Type             FacilityType `json:"type"`
 	CategoryID       *int64       `json:"category_id,omitempty"`
@@ -40,6 +38,4 @@ type Facility struct {
 	Amenities        string       `json:"amenities"`
 	Accreditations   string       `json:"accreditations"`
 	MetaData         string       `json:"meta_data"`
-	CreatedAt        time.Time    `json:"created_at"`
-	UpdatedAt        time.Time    `json:"updated_at"`
 }

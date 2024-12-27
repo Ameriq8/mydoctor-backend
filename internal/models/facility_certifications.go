@@ -3,7 +3,7 @@ package models
 import "time"
 
 type FacilityCertification struct {
-	ID               int64      `json:"id"`
+	BaseModel
 	FacilityID       int64      `json:"facility_id"`
 	Name             string     `json:"name"`
 	IssuingAuthority string     `json:"issuing_authority"`
@@ -11,6 +11,4 @@ type FacilityCertification struct {
 	ExpiryDate       *time.Time `json:"expiry_date,omitempty"`
 	Status           string     `json:"status"`
 	DocumentURL      string     `json:"document_url"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at"`
 }
