@@ -1,0 +1,26 @@
+# Environment files
+.env
+
+# Logs
+*.log
+
+# Binaries
+/bin/
+
+# Compiled files
+*.out
+*.exe
+
+# Dependency directories
+vendor/
+
+# IDE files
+.idea/
+*.vscode/
+
+# Go specific
+*.test
+*.exe
+*.o
+*.a
+*.so
