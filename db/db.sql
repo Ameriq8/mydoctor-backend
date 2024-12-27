@@ -1,6 +1,7 @@
 -- ======================================
 -- 1) Enable necessary extensions
 -- ======================================
+-- Enables extensions required for UUID generation, indexing, and text search.
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
@@ -8,6 +9,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- ======================================
 -- 2) Create ENUM type for facility_type
 -- ======================================
+-- Defines the 'facility_type' ENUM to categorize different types of facilities.
 CREATE TYPE facility_type AS ENUM (
     'Public Hospital',
     'Teaching Hospital',
@@ -23,6 +25,8 @@ CREATE TYPE facility_type AS ENUM (
 -- ======================================
 -- 3) Create facility_categories
 -- ======================================
+-- The 'facility_categories' table is used to organize facilities into categories. 
+-- Each category can have a parent category, allowing for hierarchical organization.
 CREATE TABLE facility_categories (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -35,6 +39,9 @@ CREATE TABLE facility_categories (
 -- ======================================
 -- 4) Create cities
 -- ======================================
+-- The 'cities' table stores information about cities where facilities are located.
+-- This includes geographic data, population, and timezone, allowing facilities
+-- to be linked to their respective cities for better organization and filtering.
 CREATE TABLE cities (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -48,6 +55,10 @@ CREATE TABLE cities (
 -- ======================================
 -- 5) Create facilities (referenced by doctors, etc.)
 -- ======================================
+-- The 'facilities' table contains information about healthcare facilities.
+-- It links to 'facility_categories' and 'cities', and includes details like location, contact info, and features.
+-- The 'coordinates' field stores geographical data for mapping purposes, while
+-- the 'meta_data' field is used for storing additional customizable information.
 CREATE TABLE facilities (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
@@ -79,6 +90,9 @@ CREATE TABLE facilities (
 -- ======================================
 -- 6) Create doctors (references facilities)
 -- ======================================
+-- The 'doctors' table stores information about doctors working in facilities.
+-- It includes fields for name, specialty, primary facility, and contact information.
+-- Linking doctors to primary facilities helps manage staff assignments effectively.
 CREATE TABLE doctors (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
@@ -93,6 +107,9 @@ CREATE TABLE doctors (
 -- ======================================
 -- 7) Create reviews (generic reference via entity_type/entity_id)
 -- ======================================
+-- The 'reviews' table allows users to provide feedback on facilities, doctors, or other entities.
+-- It includes a generic reference via 'entity_type' and 'entity_id', allowing flexibility
+-- to associate reviews with various types of entities in the system.
 CREATE TABLE reviews (
     id BIGSERIAL PRIMARY KEY,
     entity_type VARCHAR(50) NOT NULL,
@@ -107,6 +124,9 @@ CREATE TABLE reviews (
 -- ======================================
 -- 8) Create facility_departments
 -- ======================================
+-- The 'facility_departments' table organizes departments within a facility.
+-- It links to a facility and can have details about the head doctor and floor location.
+-- This table is essential for managing organizational units and department-specific data.
 CREATE TABLE facility_departments (
     id BIGSERIAL PRIMARY KEY,
     facility_id BIGINT REFERENCES facilities(id),
@@ -122,6 +142,10 @@ CREATE TABLE facility_departments (
 -- ======================================
 -- 9) Create facility_equipment
 -- ======================================
+-- The 'facility_equipment' table tracks equipment available in facilities.
+-- It includes details such as manufacturer, maintenance dates, and current status.
+-- Maintenance tracking fields like 'last_maintenance_date' and 'next_maintenance_date'
+-- ensure that equipment is properly maintained to avoid downtime.
 CREATE TABLE facility_equipment (
     id BIGSERIAL PRIMARY KEY,
     facility_id BIGINT REFERENCES facilities(id),
@@ -140,6 +164,8 @@ CREATE TABLE facility_equipment (
 -- ======================================
 -- 10) Create facility_operating_hours
 -- ======================================
+-- The 'facility_operating_hours' table specifies operating hours for facilities or their departments.
+-- Days of the week are represented numerically (0=Sunday, 6=Saturday), making it easier to standardize schedules.
 CREATE TABLE facility_operating_hours (
     id BIGSERIAL PRIMARY KEY,
     facility_id BIGINT REFERENCES facilities(id),
@@ -155,6 +181,9 @@ CREATE TABLE facility_operating_hours (
 -- ======================================
 -- 11) Create facility_insurance_providers
 -- ======================================
+-- The 'facility_insurance_providers' table links facilities with insurance providers.
+-- This table allows storage of detailed coverage information in JSON format,
+-- enabling flexible representation of insurance data.
 CREATE TABLE facility_insurance_providers (
     facility_id BIGINT REFERENCES facilities(id),
     insurance_provider_id BIGINT,
@@ -167,6 +196,8 @@ CREATE TABLE facility_insurance_providers (
 -- ======================================
 -- 12) Create facility_certifications
 -- ======================================
+-- The 'facility_certifications' table tracks certifications awarded to facilities.
+-- It includes fields for issuing authority, validity dates, and document URLs.
 CREATE TABLE facility_certifications (
     id BIGSERIAL PRIMARY KEY,
     facility_id BIGINT REFERENCES facilities(id),
@@ -183,13 +214,13 @@ CREATE TABLE facility_certifications (
 -- ======================================
 -- 13) Create indexes for facility-related tables
 -- ======================================
+-- Improves query performance on frequently searched fields.
 CREATE INDEX idx_facilities_type_city ON facilities(type, city_id);
 CREATE INDEX idx_facilities_coordinates ON facilities USING GIST(coordinates);
 CREATE INDEX idx_facilities_rating_type ON facilities(rating DESC, type);
 CREATE INDEX idx_facilities_amenities ON facilities USING GIN(amenities);
 CREATE INDEX idx_facilities_meta_data ON facilities USING GIN(meta_data);
 
-CREATE UNIQUE INDEX idx_facility_stats_facility_id ON facility_stats (facility_id);
 CREATE INDEX idx_facility_departments_facility ON facility_departments(facility_id);
 CREATE INDEX idx_facility_equipment_facility ON facility_equipment(facility_id, status);
 CREATE INDEX idx_facility_operating_hours_facility ON facility_operating_hours(facility_id, day_of_week);
@@ -199,6 +230,7 @@ CREATE INDEX idx_facility_certifications_facility ON facility_certifications(fac
 -- ======================================
 -- 14) Create materialized view for facility statistics
 -- ======================================
+-- Aggregates key statistics about facilities for quick access and reporting.
 CREATE MATERIALIZED VIEW facility_stats AS
 SELECT 
     f.id AS facility_id,
@@ -219,9 +251,13 @@ LEFT JOIN facility_equipment fe ON fe.facility_id = f.id
 LEFT JOIN facility_certifications fc ON fc.facility_id = f.id
 GROUP BY f.id, f.name, f.type, f.city_id;
 
+-- Note: Ensure that the 'facility_stats' table exists before creating its index.
+CREATE UNIQUE INDEX idx_facility_stats_facility_id ON facility_stats (facility_id);
+
 -- ======================================
 -- 15) Create function to refresh materialized view
 -- ======================================
+-- Defines a function to refresh the 'facility_stats' materialized view whenever relevant data changes.
 CREATE OR REPLACE FUNCTION refresh_facility_stats()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -238,6 +274,7 @@ FOR EACH STATEMENT EXECUTE FUNCTION refresh_facility_stats();
 -- ======================================
 -- 16) Create an audit logging system
 -- ======================================
+-- The 'audit_log' table records changes to key tables for auditing purposes.
 CREATE TABLE audit_log (
     id BIGSERIAL PRIMARY KEY,
     table_name VARCHAR(50),
@@ -247,6 +284,7 @@ CREATE TABLE audit_log (
     changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Function to log audit information
 CREATE OR REPLACE FUNCTION log_audit()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -295,6 +333,9 @@ FOR EACH ROW EXECUTE FUNCTION log_audit();
 -- ======================================
 -- 17) Create plans table
 -- ======================================
+-- The 'plans' table defines subscription plans available for facilities.
+-- Each plan includes pricing, a description, and a set of features.
+-- This table is key for implementing subscription tiers or service levels.
 CREATE TABLE plans (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
@@ -310,6 +351,7 @@ CREATE TABLE plans (
 -- 18) Seed the plans table
 --   (You may also do this in separate insert statements or via your app)
 -- ======================================
+-- Inserts initial subscription plans into the 'plans' table.
 INSERT INTO plans (name, monthly_price, yearly_price, description, features)
 VALUES
 (
@@ -337,6 +379,8 @@ VALUES
 -- ======================================
 -- 19) Create facility_plans table to link facilities to plans
 -- ======================================
+-- The 'facility_plans' table links facilities to subscription plans.
+-- It tracks the start and end dates for the plan as well as its activation status.
 CREATE TABLE facility_plans (
     id BIGSERIAL PRIMARY KEY,
     facility_id BIGINT REFERENCES facilities(id) ON DELETE CASCADE,
@@ -353,7 +397,7 @@ CREATE TABLE facility_plans (
     UNIQUE (facility_id, plan_id)
 );
 
--- (Optional) Add triggers for auditing plan changes
+-- Create triggers for auditing plan changes
 CREATE TRIGGER audit_plans
 AFTER INSERT OR UPDATE OR DELETE ON plans
 FOR EACH ROW EXECUTE FUNCTION log_audit();
