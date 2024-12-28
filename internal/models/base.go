@@ -7,3 +7,15 @@ type BaseModel struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// SQLRepository provides a SQL-based implementation of the Repository interface.
+// I'm using "database/sql" & "github.com/lib/pq"
+// Each Repository have this methods
+// Find
+// FindMany
+// Create
+// CreateMany
+// Update
+// UpdateMany
+// Delete
+// DeleteMany

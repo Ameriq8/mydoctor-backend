@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"server/config"
+	pg "server/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,5 +29,10 @@ func main() {
 		log.Fatalf("Server failed to start: %v", err)
 	} else {
 		log.Printf("Server started on port %s", port)
+		db, nil := pg.NewDB()
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer db.Close()
 	}
 }

@@ -1,30 +1,28 @@
 package pg
 
 import (
-	"database/sql"
+	"fmt"
 	"server/config"
 
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
-// Connect to the database
-func Connect() (*sql.DB, error) {
-	// get the environment variables
-	host := config.LoadConfig().DBHost
-	port := config.LoadConfig().DBPort
-	user := config.LoadConfig().DBUser
-	password := config.LoadConfig().DBPassword
-	database := config.LoadConfig().DBName
+// DB initializes and returns a new database connection using sqlx
+func NewDB() (*sqlx.DB, error) {
+	cfg := config.LoadConfig()
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode)
 
-	// build the connection string
-	connStr := "host=" + host + " port=" + port + " user=" + user + " password=" + password + " sslmode=disable"
-
-	// connect to the database
-	db, err := sql.Open(database, connStr)
+	db, err := sqlx.Connect(cfg.Driver, dsn)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error connecting to the database: %v", err)
 	}
-	defer db.Close()
+
+	// Set connection pool parameters
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(0)
 
 	return db, nil
 }
