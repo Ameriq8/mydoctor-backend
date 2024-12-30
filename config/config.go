@@ -1,8 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -25,6 +28,11 @@ type LoadedConfig struct {
 }
 
 func LoadConfig() LoadedConfig {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("No .env file found. Using default environment variables.")
+	}
+
 	return LoadedConfig{
 		Config: Config{
 			ServerPort: getEnv("SERVER_PORT", "8080"),
