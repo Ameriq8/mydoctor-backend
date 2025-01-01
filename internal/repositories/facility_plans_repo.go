@@ -3,6 +3,7 @@ package repositories
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"server/internal/models"
 
@@ -26,9 +27,15 @@ func NewFacilityPlansRepository(db *sqlx.DB) FacilityPlansRepository {
 
 // Find fetches a facility plan by its ID.
 func (r *facilityPlansRepository) Find(id int64) (*models.FacilityPlan, error) {
+	start := time.Now()
+
 	var plan models.FacilityPlan
 	query := `SELECT * FROM facility_plans WHERE id = $1`
-	if err := r.db.Get(&plan, query, id); err != nil {
+	err := r.db.Get(&plan, query, id)
+
+	trackMetrics("Find", "facility_plans", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &plan, nil
@@ -36,6 +43,8 @@ func (r *facilityPlansRepository) Find(id int64) (*models.FacilityPlan, error) {
 
 // FindMany fetches facility plans based on the filter.
 func (r *facilityPlansRepository) FindMany(filter map[string]interface{}) ([]models.FacilityPlan, error) {
+	start := time.Now()
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -52,7 +61,11 @@ func (r *facilityPlansRepository) FindMany(filter map[string]interface{}) ([]mod
 	}
 
 	var plans []models.FacilityPlan
-	if err := r.db.Select(&plans, query, args...); err != nil {
+	err := r.db.Select(&plans, query, args...)
+
+	trackMetrics("FindMany", "facility_plans", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return plans, nil
@@ -60,6 +73,8 @@ func (r *facilityPlansRepository) FindMany(filter map[string]interface{}) ([]mod
 
 // Create adds a new facility plan.
 func (r *facilityPlansRepository) Create(entity *models.FacilityPlan) (*models.FacilityPlan, error) {
+	start := time.Now()
+
 	query := `
 		INSERT INTO facility_plans (facility_id, plan_id, start_date, end_date, is_active)
 		VALUES (:facility_id, :plan_id, :start_date, :end_date, :is_active)
@@ -67,22 +82,28 @@ func (r *facilityPlansRepository) Create(entity *models.FacilityPlan) (*models.F
 
 	rows, err := r.db.NamedQuery(query, entity)
 	if err != nil {
+		trackMetrics("Create", "facility_plans", start, err)
 		return nil, err
 	}
 	defer rows.Close()
 
 	if rows.Next() {
 		if err := rows.StructScan(entity); err != nil {
+			trackMetrics("Create", "facility_plans", start, err)
 			return nil, err
 		}
 	}
+	trackMetrics("Create", "facility_plans", start, nil)
 	return entity, nil
 }
 
 // CreateMany adds multiple facility plans.
 func (r *facilityPlansRepository) CreateMany(entities []models.FacilityPlan) ([]models.FacilityPlan, error) {
+	start := time.Now()
+
 	tx, err := r.db.Beginx()
 	if err != nil {
+		trackMetrics("CreateMany", "facility_plans", start, err)
 		return nil, err
 	}
 	defer tx.Rollback()
@@ -96,6 +117,7 @@ func (r *facilityPlansRepository) CreateMany(entities []models.FacilityPlan) ([]
 	for _, entity := range entities {
 		rows, err := tx.NamedQuery(query, entity)
 		if err != nil {
+			trackMetrics("CreateMany", "facility_plans", start, err)
 			return nil, err
 		}
 		defer rows.Close()
@@ -109,7 +131,10 @@ func (r *facilityPlansRepository) CreateMany(entities []models.FacilityPlan) ([]
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	trackMetrics("CreateMany", "facility_plans", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return results, nil
@@ -117,6 +142,8 @@ func (r *facilityPlansRepository) CreateMany(entities []models.FacilityPlan) ([]
 
 // Update modifies a facility plan by ID.
 func (r *facilityPlansRepository) Update(id int64, updates map[string]interface{}) (*models.FacilityPlan, error) {
+	start := time.Now()
+
 	setClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -135,7 +162,11 @@ func (r *facilityPlansRepository) Update(id int64, updates map[string]interface{
 		RETURNING *`, strings.Join(setClauses, ", "), argIndex)
 
 	var plan models.FacilityPlan
-	if err := r.db.QueryRowx(query, args...).StructScan(&plan); err != nil {
+	err := r.db.QueryRowx(query, args...).StructScan(&plan)
+
+	trackMetrics("Update", "facility_plans", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &plan, nil
@@ -143,6 +174,8 @@ func (r *facilityPlansRepository) Update(id int64, updates map[string]interface{
 
 // UpdateMany modifies multiple facility plans based on the filter.
 func (r *facilityPlansRepository) UpdateMany(filter map[string]interface{}, updates map[string]interface{}) (int64, error) {
+	start := time.Now()
+
 	setClauses := []string{}
 	whereClauses := []string{}
 	args := []interface{}{}
@@ -166,6 +199,8 @@ func (r *facilityPlansRepository) UpdateMany(filter map[string]interface{}, upda
 		WHERE %s`, strings.Join(setClauses, ", "), strings.Join(whereClauses, " AND "))
 
 	result, err := r.db.Exec(query, args...)
+	trackMetrics("UpdateMany", "facility_plans", start, err)
+
 	if err != nil {
 		return 0, err
 	}
@@ -179,13 +214,19 @@ func (r *facilityPlansRepository) UpdateMany(filter map[string]interface{}, upda
 
 // Delete removes a facility plan by ID and returns the deleted row.
 func (r *facilityPlansRepository) Delete(id int64) (*models.FacilityPlan, error) {
+	start := time.Now()
+
 	query := `
 		DELETE FROM facility_plans
 		WHERE id = $1
 		RETURNING *`
 
 	var plan models.FacilityPlan
-	if err := r.db.QueryRowx(query, id).StructScan(&plan); err != nil {
+	err := r.db.QueryRowx(query, id).StructScan(&plan)
+
+	trackMetrics("Delete", "facility_plans", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &plan, nil
@@ -193,6 +234,8 @@ func (r *facilityPlansRepository) Delete(id int64) (*models.FacilityPlan, error)
 
 // DeleteMany removes multiple facility plans based on the filter and returns the deleted rows.
 func (r *facilityPlansRepository) DeleteMany(filter map[string]interface{}) ([]models.FacilityPlan, error) {
+	start := time.Now()
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -210,6 +253,7 @@ func (r *facilityPlansRepository) DeleteMany(filter map[string]interface{}) ([]m
 
 	rows, err := r.db.Queryx(query, args...)
 	if err != nil {
+		trackMetrics("DeleteMany", "facility_plans", start, err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -222,5 +266,6 @@ func (r *facilityPlansRepository) DeleteMany(filter map[string]interface{}) ([]m
 		}
 		deletedPlans = append(deletedPlans, plan)
 	}
+	trackMetrics("DeleteMany", "facility_plans", start, nil)
 	return deletedPlans, nil
 }

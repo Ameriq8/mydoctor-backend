@@ -3,6 +3,7 @@ package repositories
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"server/internal/models"
 
@@ -26,9 +27,15 @@ func NewDoctorRepository(db *sqlx.DB) DoctorRepository {
 
 // Find fetches a doctor by its ID.
 func (r *doctorRepository) Find(id int64) (*models.Doctor, error) {
+	start := time.Now()
+
 	var doctor models.Doctor
 	query := `SELECT * FROM doctors WHERE id = $1`
-	if err := r.db.Get(&doctor, query, id); err != nil {
+	err := r.db.Get(&doctor, query, id)
+
+	trackMetrics("Find", "doctors", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &doctor, nil
@@ -36,6 +43,8 @@ func (r *doctorRepository) Find(id int64) (*models.Doctor, error) {
 
 // FindMany fetches doctors based on the filter.
 func (r *doctorRepository) FindMany(filter map[string]interface{}) ([]models.Doctor, error) {
+	start := time.Now()
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -52,7 +61,11 @@ func (r *doctorRepository) FindMany(filter map[string]interface{}) ([]models.Doc
 	}
 
 	var doctors []models.Doctor
-	if err := r.db.Select(&doctors, query, args...); err != nil {
+	err := r.db.Select(&doctors, query, args...)
+
+	trackMetrics("FindMany", "doctors", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return doctors, nil
@@ -60,6 +73,8 @@ func (r *doctorRepository) FindMany(filter map[string]interface{}) ([]models.Doc
 
 // Create adds a new doctor.
 func (r *doctorRepository) Create(entity *models.Doctor) (*models.Doctor, error) {
+	start := time.Now()
+
 	query := `
 		INSERT INTO doctors (name, specialty, primary_facility_id, contact_number, email)
 		VALUES (:name, :specialty, :primary_facility_id, :contact_number, :email)
@@ -67,22 +82,28 @@ func (r *doctorRepository) Create(entity *models.Doctor) (*models.Doctor, error)
 
 	rows, err := r.db.NamedQuery(query, entity)
 	if err != nil {
+		trackMetrics("Create", "doctors", start, err)
 		return nil, err
 	}
 	defer rows.Close()
 
 	if rows.Next() {
 		if err := rows.StructScan(entity); err != nil {
+			trackMetrics("Create", "doctors", start, err)
 			return nil, err
 		}
 	}
+	trackMetrics("Create", "doctors", start, nil)
 	return entity, nil
 }
 
 // CreateMany adds multiple doctors.
 func (r *doctorRepository) CreateMany(entities []models.Doctor) ([]models.Doctor, error) {
+	start := time.Now()
+
 	tx, err := r.db.Beginx()
 	if err != nil {
+		trackMetrics("CreateMany", "doctors", start, err)
 		return nil, err
 	}
 	defer tx.Rollback()
@@ -96,6 +117,7 @@ func (r *doctorRepository) CreateMany(entities []models.Doctor) ([]models.Doctor
 	for _, entity := range entities {
 		rows, err := tx.NamedQuery(query, entity)
 		if err != nil {
+			trackMetrics("CreateMany", "doctors", start, err)
 			return nil, err
 		}
 		defer rows.Close()
@@ -109,7 +131,10 @@ func (r *doctorRepository) CreateMany(entities []models.Doctor) ([]models.Doctor
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	trackMetrics("CreateMany", "doctors", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return results, nil
@@ -117,6 +142,8 @@ func (r *doctorRepository) CreateMany(entities []models.Doctor) ([]models.Doctor
 
 // Update modifies a doctor by ID.
 func (r *doctorRepository) Update(id int64, updates map[string]interface{}) (*models.Doctor, error) {
+	start := time.Now()
+
 	setClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -135,7 +162,11 @@ func (r *doctorRepository) Update(id int64, updates map[string]interface{}) (*mo
 		RETURNING *`, strings.Join(setClauses, ", "), argIndex)
 
 	var doctor models.Doctor
-	if err := r.db.QueryRowx(query, args...).StructScan(&doctor); err != nil {
+	err := r.db.QueryRowx(query, args...).StructScan(&doctor)
+
+	trackMetrics("Update", "doctors", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &doctor, nil
@@ -143,6 +174,8 @@ func (r *doctorRepository) Update(id int64, updates map[string]interface{}) (*mo
 
 // UpdateMany modifies multiple doctors based on the filter.
 func (r *doctorRepository) UpdateMany(filter map[string]interface{}, updates map[string]interface{}) (int64, error) {
+	start := time.Now()
+
 	setClauses := []string{}
 	whereClauses := []string{}
 	args := []interface{}{}
@@ -166,6 +199,8 @@ func (r *doctorRepository) UpdateMany(filter map[string]interface{}, updates map
 		WHERE %s`, strings.Join(setClauses, ", "), strings.Join(whereClauses, " AND "))
 
 	result, err := r.db.Exec(query, args...)
+	trackMetrics("UpdateMany", "doctors", start, err)
+
 	if err != nil {
 		return 0, err
 	}
@@ -179,13 +214,19 @@ func (r *doctorRepository) UpdateMany(filter map[string]interface{}, updates map
 
 // Delete removes a doctor by ID and returns the deleted row.
 func (r *doctorRepository) Delete(id int64) (*models.Doctor, error) {
+	start := time.Now()
+
 	query := `
 		DELETE FROM doctors
 		WHERE id = $1
 		RETURNING *`
 
 	var doctor models.Doctor
-	if err := r.db.QueryRowx(query, id).StructScan(&doctor); err != nil {
+	err := r.db.QueryRowx(query, id).StructScan(&doctor)
+
+	trackMetrics("Delete", "doctors", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &doctor, nil
@@ -193,6 +234,8 @@ func (r *doctorRepository) Delete(id int64) (*models.Doctor, error) {
 
 // DeleteMany removes multiple doctors based on the filter and returns the deleted rows.
 func (r *doctorRepository) DeleteMany(filter map[string]interface{}) ([]models.Doctor, error) {
+	start := time.Now()
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -210,6 +253,7 @@ func (r *doctorRepository) DeleteMany(filter map[string]interface{}) ([]models.D
 
 	rows, err := r.db.Queryx(query, args...)
 	if err != nil {
+		trackMetrics("DeleteMany", "doctors", start, err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -222,5 +266,6 @@ func (r *doctorRepository) DeleteMany(filter map[string]interface{}) ([]models.D
 		}
 		deletedDoctors = append(deletedDoctors, doctor)
 	}
+	trackMetrics("DeleteMany", "doctors", start, nil)
 	return deletedDoctors, nil
 }

@@ -3,6 +3,7 @@ package repositories
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"server/internal/models"
 
@@ -26,9 +27,15 @@ func NewFacilityEquipmentRepository(db *sqlx.DB) FacilityEquipmentRepository {
 
 // Find fetches a facility equipment by its ID.
 func (r *facilityEquipmentRepository) Find(id int64) (*models.FacilityEquipment, error) {
+	start := time.Now()
+
 	var equipment models.FacilityEquipment
 	query := `SELECT * FROM facility_equipment WHERE id = $1`
-	if err := r.db.Get(&equipment, query, id); err != nil {
+	err := r.db.Get(&equipment, query, id)
+
+	trackMetrics("Find", "facility_equipment", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &equipment, nil
@@ -36,6 +43,8 @@ func (r *facilityEquipmentRepository) Find(id int64) (*models.FacilityEquipment,
 
 // FindMany fetches facility equipment based on the filter.
 func (r *facilityEquipmentRepository) FindMany(filter map[string]interface{}) ([]models.FacilityEquipment, error) {
+	start := time.Now()
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -52,7 +61,11 @@ func (r *facilityEquipmentRepository) FindMany(filter map[string]interface{}) ([
 	}
 
 	var equipment []models.FacilityEquipment
-	if err := r.db.Select(&equipment, query, args...); err != nil {
+	err := r.db.Select(&equipment, query, args...)
+
+	trackMetrics("FindMany", "facility_equipment", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return equipment, nil
@@ -60,6 +73,8 @@ func (r *facilityEquipmentRepository) FindMany(filter map[string]interface{}) ([
 
 // Create adds a new facility equipment.
 func (r *facilityEquipmentRepository) Create(entity *models.FacilityEquipment) (*models.FacilityEquipment, error) {
+	start := time.Now()
+
 	query := `
 		INSERT INTO facility_equipment (facility_id, department_id, name, model, manufacturer, purchase_date, last_maintenance_date, next_maintenance_date, status)
 		VALUES (:facility_id, :department_id, :name, :model, :manufacturer, :purchase_date, :last_maintenance_date, :next_maintenance_date, :status)
@@ -67,22 +82,28 @@ func (r *facilityEquipmentRepository) Create(entity *models.FacilityEquipment) (
 
 	rows, err := r.db.NamedQuery(query, entity)
 	if err != nil {
+		trackMetrics("Create", "facility_equipment", start, err)
 		return nil, err
 	}
 	defer rows.Close()
 
 	if rows.Next() {
 		if err := rows.StructScan(entity); err != nil {
+			trackMetrics("Create", "facility_equipment", start, err)
 			return nil, err
 		}
 	}
+	trackMetrics("Create", "facility_equipment", start, nil)
 	return entity, nil
 }
 
 // CreateMany adds multiple facility equipment records.
 func (r *facilityEquipmentRepository) CreateMany(entities []models.FacilityEquipment) ([]models.FacilityEquipment, error) {
+	start := time.Now()
+
 	tx, err := r.db.Beginx()
 	if err != nil {
+		trackMetrics("CreateMany", "facility_equipment", start, err)
 		return nil, err
 	}
 	defer tx.Rollback()
@@ -96,6 +117,7 @@ func (r *facilityEquipmentRepository) CreateMany(entities []models.FacilityEquip
 	for _, entity := range entities {
 		rows, err := tx.NamedQuery(query, entity)
 		if err != nil {
+			trackMetrics("CreateMany", "facility_equipment", start, err)
 			return nil, err
 		}
 		defer rows.Close()
@@ -109,7 +131,10 @@ func (r *facilityEquipmentRepository) CreateMany(entities []models.FacilityEquip
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	trackMetrics("CreateMany", "facility_equipment", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return results, nil
@@ -117,6 +142,8 @@ func (r *facilityEquipmentRepository) CreateMany(entities []models.FacilityEquip
 
 // Update modifies a facility equipment record by ID.
 func (r *facilityEquipmentRepository) Update(id int64, updates map[string]interface{}) (*models.FacilityEquipment, error) {
+	start := time.Now()
+
 	setClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -135,7 +162,11 @@ func (r *facilityEquipmentRepository) Update(id int64, updates map[string]interf
 		RETURNING *`, strings.Join(setClauses, ", "), argIndex)
 
 	var equipment models.FacilityEquipment
-	if err := r.db.QueryRowx(query, args...).StructScan(&equipment); err != nil {
+	err := r.db.QueryRowx(query, args...).StructScan(&equipment)
+
+	trackMetrics("Update", "facility_equipment", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &equipment, nil
@@ -143,6 +174,8 @@ func (r *facilityEquipmentRepository) Update(id int64, updates map[string]interf
 
 // UpdateMany modifies multiple facility equipment records based on the filter.
 func (r *facilityEquipmentRepository) UpdateMany(filter map[string]interface{}, updates map[string]interface{}) (int64, error) {
+	start := time.Now()
+
 	setClauses := []string{}
 	whereClauses := []string{}
 	args := []interface{}{}
@@ -166,6 +199,8 @@ func (r *facilityEquipmentRepository) UpdateMany(filter map[string]interface{}, 
 		WHERE %s`, strings.Join(setClauses, ", "), strings.Join(whereClauses, " AND "))
 
 	result, err := r.db.Exec(query, args...)
+	trackMetrics("UpdateMany", "facility_equipment", start, err)
+
 	if err != nil {
 		return 0, err
 	}
@@ -179,13 +214,19 @@ func (r *facilityEquipmentRepository) UpdateMany(filter map[string]interface{}, 
 
 // Delete removes a facility equipment record by ID and returns the deleted row.
 func (r *facilityEquipmentRepository) Delete(id int64) (*models.FacilityEquipment, error) {
+	start := time.Now()
+
 	query := `
 		DELETE FROM facility_equipment
 		WHERE id = $1
 		RETURNING *`
 
 	var equipment models.FacilityEquipment
-	if err := r.db.QueryRowx(query, id).StructScan(&equipment); err != nil {
+	err := r.db.QueryRowx(query, id).StructScan(&equipment)
+
+	trackMetrics("Delete", "facility_equipment", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &equipment, nil
@@ -193,6 +234,8 @@ func (r *facilityEquipmentRepository) Delete(id int64) (*models.FacilityEquipmen
 
 // DeleteMany removes multiple facility equipment records based on the filter and returns the deleted rows.
 func (r *facilityEquipmentRepository) DeleteMany(filter map[string]interface{}) ([]models.FacilityEquipment, error) {
+	start := time.Now()
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -210,6 +253,7 @@ func (r *facilityEquipmentRepository) DeleteMany(filter map[string]interface{}) 
 
 	rows, err := r.db.Queryx(query, args...)
 	if err != nil {
+		trackMetrics("DeleteMany", "facility_equipment", start, err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -222,5 +266,6 @@ func (r *facilityEquipmentRepository) DeleteMany(filter map[string]interface{}) 
 		}
 		deletedEquipment = append(deletedEquipment, equipment)
 	}
+	trackMetrics("DeleteMany", "facility_equipment", start, nil)
 	return deletedEquipment, nil
 }

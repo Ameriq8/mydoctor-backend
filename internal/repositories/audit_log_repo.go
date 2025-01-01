@@ -3,6 +3,7 @@ package repositories
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"server/internal/models"
 
@@ -27,9 +28,16 @@ func NewAuditLogRepository(db *sqlx.DB) AuditLogRepository {
 
 // Find fetches an audit log entry by its ID.
 func (r *auditLogRepository) Find(id int64) (*models.AuditLog, error) {
+	start := time.Now() // Start time for metrics
+
 	var log models.AuditLog
 	query := `SELECT * FROM audit_log WHERE id = $1`
-	if err := r.db.Get(&log, query, id); err != nil {
+	err := r.db.Get(&log, query, id)
+
+	// Track the metrics for the Find operation
+	trackMetrics("Find", "audit_log", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &log, nil
@@ -37,6 +45,8 @@ func (r *auditLogRepository) Find(id int64) (*models.AuditLog, error) {
 
 // FindMany fetches audit log entries based on the filter.
 func (r *auditLogRepository) FindMany(filter map[string]interface{}) ([]models.AuditLog, error) {
+	start := time.Now() // Start time for metrics
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -53,7 +63,12 @@ func (r *auditLogRepository) FindMany(filter map[string]interface{}) ([]models.A
 	}
 
 	var logs []models.AuditLog
-	if err := r.db.Select(&logs, query, args...); err != nil {
+	err := r.db.Select(&logs, query, args...)
+
+	// Track the metrics for the FindMany operation
+	trackMetrics("FindMany", "audit_log", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return logs, nil

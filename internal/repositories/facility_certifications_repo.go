@@ -3,6 +3,7 @@ package repositories
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"server/internal/models"
 
@@ -26,9 +27,15 @@ func NewFacilityCertificationsRepository(db *sqlx.DB) FacilityCertificationsRepo
 
 // Find fetches a facility certification by its ID.
 func (r *facilityCertificationsRepository) Find(id int64) (*models.FacilityCertification, error) {
+	start := time.Now()
+
 	var certification models.FacilityCertification
 	query := `SELECT * FROM facility_certifications WHERE id = $1`
-	if err := r.db.Get(&certification, query, id); err != nil {
+	err := r.db.Get(&certification, query, id)
+
+	trackMetrics("Find", "facility_certifications", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &certification, nil
@@ -36,6 +43,8 @@ func (r *facilityCertificationsRepository) Find(id int64) (*models.FacilityCerti
 
 // FindMany fetches facility certifications based on the filter.
 func (r *facilityCertificationsRepository) FindMany(filter map[string]interface{}) ([]models.FacilityCertification, error) {
+	start := time.Now()
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -52,7 +61,11 @@ func (r *facilityCertificationsRepository) FindMany(filter map[string]interface{
 	}
 
 	var certifications []models.FacilityCertification
-	if err := r.db.Select(&certifications, query, args...); err != nil {
+	err := r.db.Select(&certifications, query, args...)
+
+	trackMetrics("FindMany", "facility_certifications", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return certifications, nil
@@ -60,6 +73,8 @@ func (r *facilityCertificationsRepository) FindMany(filter map[string]interface{
 
 // Create adds a new facility certification.
 func (r *facilityCertificationsRepository) Create(entity *models.FacilityCertification) (*models.FacilityCertification, error) {
+	start := time.Now()
+
 	query := `
 		INSERT INTO facility_certifications (facility_id, name, issuing_authority, issue_date, expiry_date, status, document_url)
 		VALUES (:facility_id, :name, :issuing_authority, :issue_date, :expiry_date, :status, :document_url)
@@ -67,22 +82,28 @@ func (r *facilityCertificationsRepository) Create(entity *models.FacilityCertifi
 
 	rows, err := r.db.NamedQuery(query, entity)
 	if err != nil {
+		trackMetrics("Create", "facility_certifications", start, err)
 		return nil, err
 	}
 	defer rows.Close()
 
 	if rows.Next() {
 		if err := rows.StructScan(entity); err != nil {
+			trackMetrics("Create", "facility_certifications", start, err)
 			return nil, err
 		}
 	}
+	trackMetrics("Create", "facility_certifications", start, nil)
 	return entity, nil
 }
 
 // CreateMany adds multiple facility certifications.
 func (r *facilityCertificationsRepository) CreateMany(entities []models.FacilityCertification) ([]models.FacilityCertification, error) {
+	start := time.Now()
+
 	tx, err := r.db.Beginx()
 	if err != nil {
+		trackMetrics("CreateMany", "facility_certifications", start, err)
 		return nil, err
 	}
 	defer tx.Rollback()
@@ -96,6 +117,7 @@ func (r *facilityCertificationsRepository) CreateMany(entities []models.Facility
 	for _, entity := range entities {
 		rows, err := tx.NamedQuery(query, entity)
 		if err != nil {
+			trackMetrics("CreateMany", "facility_certifications", start, err)
 			return nil, err
 		}
 		defer rows.Close()
@@ -109,7 +131,10 @@ func (r *facilityCertificationsRepository) CreateMany(entities []models.Facility
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	trackMetrics("CreateMany", "facility_certifications", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return results, nil
@@ -117,6 +142,8 @@ func (r *facilityCertificationsRepository) CreateMany(entities []models.Facility
 
 // Update modifies a facility certification by ID.
 func (r *facilityCertificationsRepository) Update(id int64, updates map[string]interface{}) (*models.FacilityCertification, error) {
+	start := time.Now()
+
 	setClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -135,7 +162,11 @@ func (r *facilityCertificationsRepository) Update(id int64, updates map[string]i
 		RETURNING *`, strings.Join(setClauses, ", "), argIndex)
 
 	var certification models.FacilityCertification
-	if err := r.db.QueryRowx(query, args...).StructScan(&certification); err != nil {
+	err := r.db.QueryRowx(query, args...).StructScan(&certification)
+
+	trackMetrics("Update", "facility_certifications", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &certification, nil
@@ -143,6 +174,8 @@ func (r *facilityCertificationsRepository) Update(id int64, updates map[string]i
 
 // UpdateMany modifies multiple facility certifications based on the filter.
 func (r *facilityCertificationsRepository) UpdateMany(filter map[string]interface{}, updates map[string]interface{}) (int64, error) {
+	start := time.Now()
+
 	setClauses := []string{}
 	whereClauses := []string{}
 	args := []interface{}{}
@@ -166,6 +199,8 @@ func (r *facilityCertificationsRepository) UpdateMany(filter map[string]interfac
 		WHERE %s`, strings.Join(setClauses, ", "), strings.Join(whereClauses, " AND "))
 
 	result, err := r.db.Exec(query, args...)
+	trackMetrics("UpdateMany", "facility_certifications", start, err)
+
 	if err != nil {
 		return 0, err
 	}
@@ -179,13 +214,19 @@ func (r *facilityCertificationsRepository) UpdateMany(filter map[string]interfac
 
 // Delete removes a facility certification by ID and returns the deleted row.
 func (r *facilityCertificationsRepository) Delete(id int64) (*models.FacilityCertification, error) {
+	start := time.Now()
+
 	query := `
 		DELETE FROM facility_certifications
 		WHERE id = $1
 		RETURNING *`
 
 	var certification models.FacilityCertification
-	if err := r.db.QueryRowx(query, id).StructScan(&certification); err != nil {
+	err := r.db.QueryRowx(query, id).StructScan(&certification)
+
+	trackMetrics("Delete", "facility_certifications", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &certification, nil
@@ -193,6 +234,8 @@ func (r *facilityCertificationsRepository) Delete(id int64) (*models.FacilityCer
 
 // DeleteMany removes multiple facility certifications based on the filter and returns the deleted rows.
 func (r *facilityCertificationsRepository) DeleteMany(filter map[string]interface{}) ([]models.FacilityCertification, error) {
+	start := time.Now()
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -210,6 +253,7 @@ func (r *facilityCertificationsRepository) DeleteMany(filter map[string]interfac
 
 	rows, err := r.db.Queryx(query, args...)
 	if err != nil {
+		trackMetrics("DeleteMany", "facility_certifications", start, err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -222,5 +266,6 @@ func (r *facilityCertificationsRepository) DeleteMany(filter map[string]interfac
 		}
 		deletedCertifications = append(deletedCertifications, certification)
 	}
+	trackMetrics("DeleteMany", "facility_certifications", start, nil)
 	return deletedCertifications, nil
 }

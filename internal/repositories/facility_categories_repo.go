@@ -3,6 +3,7 @@ package repositories
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"server/internal/models"
 
@@ -26,9 +27,15 @@ func NewFacilityCategoriesRepository(db *sqlx.DB) FacilityCategoriesRepository {
 
 // Find fetches a facility category by its ID.
 func (r *facilityCategoriesRepository) Find(id int64) (*models.FacilityCategory, error) {
+	start := time.Now()
+
 	var category models.FacilityCategory
 	query := `SELECT * FROM facility_categories WHERE id = $1`
-	if err := r.db.Get(&category, query, id); err != nil {
+	err := r.db.Get(&category, query, id)
+
+	trackMetrics("Find", "facility_categories", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &category, nil
@@ -36,6 +43,8 @@ func (r *facilityCategoriesRepository) Find(id int64) (*models.FacilityCategory,
 
 // FindMany fetches facility categories based on the filter.
 func (r *facilityCategoriesRepository) FindMany(filter map[string]interface{}) ([]models.FacilityCategory, error) {
+	start := time.Now()
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -52,7 +61,11 @@ func (r *facilityCategoriesRepository) FindMany(filter map[string]interface{}) (
 	}
 
 	var categories []models.FacilityCategory
-	if err := r.db.Select(&categories, query, args...); err != nil {
+	err := r.db.Select(&categories, query, args...)
+
+	trackMetrics("FindMany", "facility_categories", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return categories, nil
@@ -60,6 +73,8 @@ func (r *facilityCategoriesRepository) FindMany(filter map[string]interface{}) (
 
 // Create adds a new facility category.
 func (r *facilityCategoriesRepository) Create(entity *models.FacilityCategory) (*models.FacilityCategory, error) {
+	start := time.Now()
+
 	query := `
 		INSERT INTO facility_categories (name, description, parent_id)
 		VALUES (:name, :description, :parent_id)
@@ -67,22 +82,28 @@ func (r *facilityCategoriesRepository) Create(entity *models.FacilityCategory) (
 
 	rows, err := r.db.NamedQuery(query, entity)
 	if err != nil {
+		trackMetrics("Create", "facility_categories", start, err)
 		return nil, err
 	}
 	defer rows.Close()
 
 	if rows.Next() {
 		if err := rows.StructScan(entity); err != nil {
+			trackMetrics("Create", "facility_categories", start, err)
 			return nil, err
 		}
 	}
+	trackMetrics("Create", "facility_categories", start, nil)
 	return entity, nil
 }
 
 // CreateMany adds multiple facility categories.
 func (r *facilityCategoriesRepository) CreateMany(entities []models.FacilityCategory) ([]models.FacilityCategory, error) {
+	start := time.Now()
+
 	tx, err := r.db.Beginx()
 	if err != nil {
+		trackMetrics("CreateMany", "facility_categories", start, err)
 		return nil, err
 	}
 	defer tx.Rollback()
@@ -96,6 +117,7 @@ func (r *facilityCategoriesRepository) CreateMany(entities []models.FacilityCate
 	for _, entity := range entities {
 		rows, err := tx.NamedQuery(query, entity)
 		if err != nil {
+			trackMetrics("CreateMany", "facility_categories", start, err)
 			return nil, err
 		}
 		defer rows.Close()
@@ -109,7 +131,10 @@ func (r *facilityCategoriesRepository) CreateMany(entities []models.FacilityCate
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	trackMetrics("CreateMany", "facility_categories", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return results, nil
@@ -117,6 +142,8 @@ func (r *facilityCategoriesRepository) CreateMany(entities []models.FacilityCate
 
 // Update modifies a facility category by ID.
 func (r *facilityCategoriesRepository) Update(id int64, updates map[string]interface{}) (*models.FacilityCategory, error) {
+	start := time.Now()
+
 	setClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -135,7 +162,11 @@ func (r *facilityCategoriesRepository) Update(id int64, updates map[string]inter
 		RETURNING *`, strings.Join(setClauses, ", "), argIndex)
 
 	var category models.FacilityCategory
-	if err := r.db.QueryRowx(query, args...).StructScan(&category); err != nil {
+	err := r.db.QueryRowx(query, args...).StructScan(&category)
+
+	trackMetrics("Update", "facility_categories", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &category, nil
@@ -143,6 +174,8 @@ func (r *facilityCategoriesRepository) Update(id int64, updates map[string]inter
 
 // UpdateMany modifies multiple facility categories based on the filter.
 func (r *facilityCategoriesRepository) UpdateMany(filter map[string]interface{}, updates map[string]interface{}) (int64, error) {
+	start := time.Now()
+
 	setClauses := []string{}
 	whereClauses := []string{}
 	args := []interface{}{}
@@ -168,6 +201,8 @@ func (r *facilityCategoriesRepository) UpdateMany(filter map[string]interface{},
 		WHERE %s`, strings.Join(setClauses, ", "), strings.Join(whereClauses, " AND "))
 
 	result, err := r.db.Exec(query, args...)
+	trackMetrics("UpdateMany", "facility_categories", start, err)
+
 	if err != nil {
 		return 0, err
 	}
@@ -176,19 +211,24 @@ func (r *facilityCategoriesRepository) UpdateMany(filter map[string]interface{},
 	if err != nil {
 		return 0, err
 	}
-
 	return rowsAffected, nil
 }
 
 // Delete removes a facility category by ID and returns the deleted row.
 func (r *facilityCategoriesRepository) Delete(id int64) (*models.FacilityCategory, error) {
+	start := time.Now()
+
 	query := `
 		DELETE FROM facility_categories
 		WHERE id = $1
 		RETURNING *`
 
 	var category models.FacilityCategory
-	if err := r.db.QueryRowx(query, id).StructScan(&category); err != nil {
+	err := r.db.QueryRowx(query, id).StructScan(&category)
+
+	trackMetrics("Delete", "facility_categories", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &category, nil
@@ -196,6 +236,8 @@ func (r *facilityCategoriesRepository) Delete(id int64) (*models.FacilityCategor
 
 // DeleteMany removes multiple facility categories based on the filter and returns the deleted rows.
 func (r *facilityCategoriesRepository) DeleteMany(filter map[string]interface{}) ([]models.FacilityCategory, error) {
+	start := time.Now()
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -213,6 +255,7 @@ func (r *facilityCategoriesRepository) DeleteMany(filter map[string]interface{})
 
 	rows, err := r.db.Queryx(query, args...)
 	if err != nil {
+		trackMetrics("DeleteMany", "facility_categories", start, err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -225,5 +268,6 @@ func (r *facilityCategoriesRepository) DeleteMany(filter map[string]interface{})
 		}
 		deletedCategories = append(deletedCategories, category)
 	}
+	trackMetrics("DeleteMany", "facility_categories", start, nil)
 	return deletedCategories, nil
 }

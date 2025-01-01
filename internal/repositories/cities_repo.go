@@ -3,6 +3,7 @@ package repositories
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"server/internal/models"
 
@@ -26,9 +27,16 @@ func NewCitiesRepository(db *sqlx.DB) CitiesRepository {
 
 // Find fetches a city by its ID.
 func (r *citiesRepository) Find(id int64) (*models.City, error) {
+	start := time.Now() // Start time for metrics
+
 	var city models.City
 	query := `SELECT * FROM cities WHERE id = $1`
-	if err := r.db.Get(&city, query, id); err != nil {
+	err := r.db.Get(&city, query, id)
+
+	// Track the metrics for the Find operation
+	trackMetrics("Find", "cities", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &city, nil
@@ -36,6 +44,8 @@ func (r *citiesRepository) Find(id int64) (*models.City, error) {
 
 // FindMany fetches cities based on the filter.
 func (r *citiesRepository) FindMany(filter map[string]interface{}) ([]models.City, error) {
+	start := time.Now() // Start time for metrics
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -52,7 +62,12 @@ func (r *citiesRepository) FindMany(filter map[string]interface{}) ([]models.Cit
 	}
 
 	var cities []models.City
-	if err := r.db.Select(&cities, query, args...); err != nil {
+	err := r.db.Select(&cities, query, args...)
+
+	// Track the metrics for the FindMany operation
+	trackMetrics("FindMany", "cities", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return cities, nil
@@ -60,6 +75,8 @@ func (r *citiesRepository) FindMany(filter map[string]interface{}) ([]models.Cit
 
 // Create adds a new city.
 func (r *citiesRepository) Create(entity *models.City) (*models.City, error) {
+	start := time.Now() // Start time for metrics
+
 	query := `
 		INSERT INTO cities (name, population, image_url, timezone)
 		VALUES (:name, :population, :image_url, :timezone)
@@ -67,22 +84,28 @@ func (r *citiesRepository) Create(entity *models.City) (*models.City, error) {
 
 	rows, err := r.db.NamedQuery(query, entity)
 	if err != nil {
+		trackMetrics("Create", "cities", start, err)
 		return nil, err
 	}
 	defer rows.Close()
 
 	if rows.Next() {
 		if err := rows.StructScan(entity); err != nil {
+			trackMetrics("Create", "cities", start, err)
 			return nil, err
 		}
 	}
+	trackMetrics("Create", "cities", start, nil)
 	return entity, nil
 }
 
 // CreateMany adds multiple cities.
 func (r *citiesRepository) CreateMany(entities []models.City) ([]models.City, error) {
+	start := time.Now() // Start time for metrics
+
 	tx, err := r.db.Beginx()
 	if err != nil {
+		trackMetrics("CreateMany", "cities", start, err)
 		return nil, err
 	}
 	defer tx.Rollback()
@@ -96,6 +119,7 @@ func (r *citiesRepository) CreateMany(entities []models.City) ([]models.City, er
 	for _, entity := range entities {
 		rows, err := tx.NamedQuery(query, entity)
 		if err != nil {
+			trackMetrics("CreateMany", "cities", start, err)
 			return nil, err
 		}
 		defer rows.Close()
@@ -109,7 +133,10 @@ func (r *citiesRepository) CreateMany(entities []models.City) ([]models.City, er
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	trackMetrics("CreateMany", "cities", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return results, nil
@@ -117,6 +144,8 @@ func (r *citiesRepository) CreateMany(entities []models.City) ([]models.City, er
 
 // Update modifies a city by ID.
 func (r *citiesRepository) Update(id int64, updates map[string]interface{}) (*models.City, error) {
+	start := time.Now() // Start time for metrics
+
 	setClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -135,14 +164,21 @@ func (r *citiesRepository) Update(id int64, updates map[string]interface{}) (*mo
 		RETURNING *`, strings.Join(setClauses, ", "), argIndex)
 
 	var city models.City
-	if err := r.db.QueryRowx(query, args...).StructScan(&city); err != nil {
+	err := r.db.QueryRowx(query, args...).StructScan(&city)
+
+	// Track the metrics for the Update operation
+	trackMetrics("Update", "cities", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &city, nil
 }
 
-// UpdateMany modifies multiple city records based on the filter.
+// UpdateMany modifies multiple city records based on the filter and updates.
 func (r *citiesRepository) UpdateMany(filter map[string]interface{}, updates map[string]interface{}) (int64, error) {
+	start := time.Now() // Start time for metrics
+
 	setClauses := []string{}
 	whereClauses := []string{}
 	args := []interface{}{}
@@ -168,6 +204,9 @@ func (r *citiesRepository) UpdateMany(filter map[string]interface{}, updates map
 		WHERE %s`, strings.Join(setClauses, ", "), strings.Join(whereClauses, " AND "))
 
 	result, err := r.db.Exec(query, args...)
+	// Track the metrics for the UpdateMany operation
+	trackMetrics("UpdateMany", "cities", start, err)
+
 	if err != nil {
 		return 0, err
 	}
@@ -182,13 +221,20 @@ func (r *citiesRepository) UpdateMany(filter map[string]interface{}, updates map
 
 // Delete removes a city by ID and returns the deleted row.
 func (r *citiesRepository) Delete(id int64) (*models.City, error) {
+	start := time.Now() // Start time for metrics
+
 	query := `
 		DELETE FROM cities
 		WHERE id = $1
 		RETURNING *`
 
 	var city models.City
-	if err := r.db.QueryRowx(query, id).StructScan(&city); err != nil {
+	err := r.db.QueryRowx(query, id).StructScan(&city)
+
+	// Track the metrics for the Delete operation
+	trackMetrics("Delete", "cities", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &city, nil
@@ -196,6 +242,8 @@ func (r *citiesRepository) Delete(id int64) (*models.City, error) {
 
 // DeleteMany removes multiple cities based on the filter and returns the deleted rows.
 func (r *citiesRepository) DeleteMany(filter map[string]interface{}) ([]models.City, error) {
+	start := time.Now() // Start time for metrics
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -213,6 +261,7 @@ func (r *citiesRepository) DeleteMany(filter map[string]interface{}) ([]models.C
 
 	rows, err := r.db.Queryx(query, args...)
 	if err != nil {
+		trackMetrics("DeleteMany", "cities", start, err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -225,5 +274,6 @@ func (r *citiesRepository) DeleteMany(filter map[string]interface{}) ([]models.C
 		}
 		deletedCities = append(deletedCities, city)
 	}
+	trackMetrics("DeleteMany", "cities", start, nil)
 	return deletedCities, nil
 }

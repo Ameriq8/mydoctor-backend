@@ -3,6 +3,7 @@ package repositories
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"server/internal/models"
 
@@ -26,9 +27,15 @@ func NewFacilityDepartmentRepository(db *sqlx.DB) FacilityDepartmentRepository {
 
 // Find fetches a facility department by its ID.
 func (r *facilityDepartmentRepository) Find(id int64) (*models.FacilityDepartment, error) {
+	start := time.Now()
+
 	var department models.FacilityDepartment
 	query := `SELECT * FROM facility_departments WHERE id = $1`
-	if err := r.db.Get(&department, query, id); err != nil {
+	err := r.db.Get(&department, query, id)
+
+	trackMetrics("Find", "facility_departments", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &department, nil
@@ -36,6 +43,8 @@ func (r *facilityDepartmentRepository) Find(id int64) (*models.FacilityDepartmen
 
 // FindMany fetches facility departments based on the filter.
 func (r *facilityDepartmentRepository) FindMany(filter map[string]interface{}) ([]models.FacilityDepartment, error) {
+	start := time.Now()
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -52,7 +61,11 @@ func (r *facilityDepartmentRepository) FindMany(filter map[string]interface{}) (
 	}
 
 	var departments []models.FacilityDepartment
-	if err := r.db.Select(&departments, query, args...); err != nil {
+	err := r.db.Select(&departments, query, args...)
+
+	trackMetrics("FindMany", "facility_departments", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return departments, nil
@@ -60,6 +73,8 @@ func (r *facilityDepartmentRepository) FindMany(filter map[string]interface{}) (
 
 // Create adds a new facility department.
 func (r *facilityDepartmentRepository) Create(entity *models.FacilityDepartment) (*models.FacilityDepartment, error) {
+	start := time.Now()
+
 	query := `
 		INSERT INTO facility_departments (facility_id, name, description, floor_number, head_doctor_id, contact_number)
 		VALUES (:facility_id, :name, :description, :floor_number, :head_doctor_id, :contact_number)
@@ -67,22 +82,28 @@ func (r *facilityDepartmentRepository) Create(entity *models.FacilityDepartment)
 
 	rows, err := r.db.NamedQuery(query, entity)
 	if err != nil {
+		trackMetrics("Create", "facility_departments", start, err)
 		return nil, err
 	}
 	defer rows.Close()
 
 	if rows.Next() {
 		if err := rows.StructScan(entity); err != nil {
+			trackMetrics("Create", "facility_departments", start, err)
 			return nil, err
 		}
 	}
+	trackMetrics("Create", "facility_departments", start, nil)
 	return entity, nil
 }
 
 // CreateMany adds multiple facility departments.
 func (r *facilityDepartmentRepository) CreateMany(entities []models.FacilityDepartment) ([]models.FacilityDepartment, error) {
+	start := time.Now()
+
 	tx, err := r.db.Beginx()
 	if err != nil {
+		trackMetrics("CreateMany", "facility_departments", start, err)
 		return nil, err
 	}
 	defer tx.Rollback()
@@ -96,6 +117,7 @@ func (r *facilityDepartmentRepository) CreateMany(entities []models.FacilityDepa
 	for _, entity := range entities {
 		rows, err := tx.NamedQuery(query, entity)
 		if err != nil {
+			trackMetrics("CreateMany", "facility_departments", start, err)
 			return nil, err
 		}
 		defer rows.Close()
@@ -109,7 +131,10 @@ func (r *facilityDepartmentRepository) CreateMany(entities []models.FacilityDepa
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	trackMetrics("CreateMany", "facility_departments", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return results, nil
@@ -117,6 +142,8 @@ func (r *facilityDepartmentRepository) CreateMany(entities []models.FacilityDepa
 
 // Update modifies a facility department by ID.
 func (r *facilityDepartmentRepository) Update(id int64, updates map[string]interface{}) (*models.FacilityDepartment, error) {
+	start := time.Now()
+
 	setClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -135,7 +162,11 @@ func (r *facilityDepartmentRepository) Update(id int64, updates map[string]inter
 		RETURNING *`, strings.Join(setClauses, ", "), argIndex)
 
 	var department models.FacilityDepartment
-	if err := r.db.QueryRowx(query, args...).StructScan(&department); err != nil {
+	err := r.db.QueryRowx(query, args...).StructScan(&department)
+
+	trackMetrics("Update", "facility_departments", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &department, nil
@@ -143,6 +174,8 @@ func (r *facilityDepartmentRepository) Update(id int64, updates map[string]inter
 
 // UpdateMany modifies multiple facility departments based on the filter.
 func (r *facilityDepartmentRepository) UpdateMany(filter map[string]interface{}, updates map[string]interface{}) (int64, error) {
+	start := time.Now()
+
 	setClauses := []string{}
 	whereClauses := []string{}
 	args := []interface{}{}
@@ -166,6 +199,8 @@ func (r *facilityDepartmentRepository) UpdateMany(filter map[string]interface{},
 		WHERE %s`, strings.Join(setClauses, ", "), strings.Join(whereClauses, " AND "))
 
 	result, err := r.db.Exec(query, args...)
+	trackMetrics("UpdateMany", "facility_departments", start, err)
+
 	if err != nil {
 		return 0, err
 	}
@@ -179,13 +214,19 @@ func (r *facilityDepartmentRepository) UpdateMany(filter map[string]interface{},
 
 // Delete removes a facility department by ID and returns the deleted row.
 func (r *facilityDepartmentRepository) Delete(id int64) (*models.FacilityDepartment, error) {
+	start := time.Now()
+
 	query := `
 		DELETE FROM facility_departments
 		WHERE id = $1
 		RETURNING *`
 
 	var department models.FacilityDepartment
-	if err := r.db.QueryRowx(query, id).StructScan(&department); err != nil {
+	err := r.db.QueryRowx(query, id).StructScan(&department)
+
+	trackMetrics("Delete", "facility_departments", start, err)
+
+	if err != nil {
 		return nil, err
 	}
 	return &department, nil
@@ -193,6 +234,8 @@ func (r *facilityDepartmentRepository) Delete(id int64) (*models.FacilityDepartm
 
 // DeleteMany removes multiple facility departments based on the filter and returns the deleted rows.
 func (r *facilityDepartmentRepository) DeleteMany(filter map[string]interface{}) ([]models.FacilityDepartment, error) {
+	start := time.Now()
+
 	whereClauses := []string{}
 	args := []interface{}{}
 	argIndex := 1
@@ -210,6 +253,7 @@ func (r *facilityDepartmentRepository) DeleteMany(filter map[string]interface{})
 
 	rows, err := r.db.Queryx(query, args...)
 	if err != nil {
+		trackMetrics("DeleteMany", "facility_departments", start, err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -222,5 +266,6 @@ func (r *facilityDepartmentRepository) DeleteMany(filter map[string]interface{})
 		}
 		deletedDepartments = append(deletedDepartments, department)
 	}
+	trackMetrics("DeleteMany", "facility_departments", start, nil)
 	return deletedDepartments, nil
 }
