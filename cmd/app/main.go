@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"server/config"
 	"server/pkg/logger"
 	"server/pkg/middlewares"
 	pg "server/pkg/utils"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
