@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"server/config"
+	"server/internal/repositories"
 	"server/pkg/logger"
 	"server/pkg/middlewares"
 	pg "server/pkg/utils"
@@ -41,8 +43,19 @@ func main() {
 
 	// Register routes
 	r.GET("/ping", func(c *gin.Context) {
+		// Create a FacilityRepository instance using the existing db connection
+		fRepo := repositories.NewFacilityRepository(db)
+
+		// Fetch a facility from the repository
+		f, err := fRepo.Find(130)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Facility not found"})
+			return
+		}
+
 		c.JSON(200, gin.H{
-			"message": "pong",
+			"message":  "pong",
+			"facility": f,
 		})
 	})
 
