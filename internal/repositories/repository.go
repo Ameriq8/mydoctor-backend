@@ -8,6 +8,6 @@ type Repository[T any] interface {
 	CreateMany(entities []T) ([]T, error)
 	Update(id int64, updates map[string]interface{}) (*T, error)
 	UpdateMany(filter map[string]interface{}, updates map[string]interface{}) (int64, error)
-	Delete(id int64) error
-	DeleteMany(filter map[string]interface{}) (int64, error)
+	Delete(id int64) (*T, error)
+	DeleteMany(filter map[string]interface{}) ([]T, error)
 }
