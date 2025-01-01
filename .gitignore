@@ -24,3 +24,7 @@ vendor/
 *.o
 *.a
 *.so
+
+# My own custom commands
+ctree.sh
+files.txt
