@@ -4,7 +4,9 @@ import (
 	"log"
 	"net/http"
 	"server/config"
+	"server/internal/handlers"
 	"server/internal/repositories"
+	"server/internal/services"
 	"server/pkg/logger"
 	"server/pkg/middlewares"
 	pg "server/pkg/utils"
@@ -58,6 +60,19 @@ func main() {
 			"facility": f,
 		})
 	})
+
+	// Initialize repositories
+	cityRepo := repositories.NewCitiesRepository(db)
+	facilityRepo := repositories.NewFacilityRepository(db)
+
+	// Initialize services
+	serviceGroup := &handlers.Services{
+		CityService:     services.NewCityService(cityRepo),
+		FacilityService: services.NewFacilityService(facilityRepo),
+	}
+
+	// Register handlers
+	handlers.RegisterHandlers(r, serviceGroup)
 
 	logger.Info("Application started", zap.String("env", "development"))
 
