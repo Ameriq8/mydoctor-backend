@@ -1,0 +1,26 @@
+config:
+  target: "http://localhost:8080" # Base URL of the application
+  phases:
+    - name: "Ramp-up to Moderate Load"
+      duration: 30
+      arrivalRate: 20 # Ramp-up to 20 requests per second
+    - name: "Steady Load"
+      duration: 60
+      arrivalRate: 50 # Steady load of 50 requests per second
+    - name: "High Load Test"
+      duration: 30
+      arrivalRate: 200 # High load of 200 requests per second
+
+  defaults:
+    headers:
+      Content-Type: "application/json" # Set content type if needed
+    http:
+      timeout: 5000 # Timeout in ms
+      retry: 2       # Retry up to 2 times if a request fails
+
+
+scenarios:
+  - name: "Ping API Test"
+    flow:
+      - get:
+          url: "/ping" # Endpoint to test

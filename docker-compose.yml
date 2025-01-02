@@ -1,8 +1,82 @@
+version: "3.8"
+
 services:
+  app:
+    container_name: gin_app
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - GIN_MODE=debug
+      - SERVER_PORT=8080
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=Ameriq81
+      - DB_NAME=mydoctor
+      - DB_SSLMODE=disable
+      - DB_DRIVER=postgres
+    networks:
+      - monitoring
+    depends_on:
+      - postgres
+      - prometheus
+
+  postgres:
+    container_name: postgres
+    image: postgres:15
+    restart: always
+    ports:
+      - "3002:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Ameriq81
+      POSTGRES_DB: mydoctor
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - monitoring
+
   prometheus:
     container_name: prometheus
+    restart: always
     image: prom/prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml
+      - ./alertmanager.yml:/etc/prometheus/alertmanager.yml
     ports:
       - "9090:9090"
+    networks:
+      - monitoring
+
+  alertmanager:
+    container_name: alertmanager
+    image: prom/alertmanager
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"
+    networks:
+      - monitoring
+
+  smtp:
+    container_name: smtp
+    image: namshi/smtp
+    ports:
+      - "1025:25"
+    networks:
+      - monitoring
+    environment:
+      - MAILNAME=localhost
+      - RELAY_NETWORKS=*
+
+volumes:
+  postgres_data:
+
+networks:
+  monitoring:
+    driver: bridge

@@ -1,0 +1,13 @@
+global:
+  smtp_smarthost: 'smtp:25' # Use the SMTP container
+  smtp_from: 'alertmanager@example.com'
+  smtp_auth_username: ''
+  smtp_auth_password: ''
+
+route:
+  receiver: 'email-alert'
+
+receivers:
+  - name: 'email-alert'
+    email_configs:
+      - to: 'hamzadeea123@gmail.com'

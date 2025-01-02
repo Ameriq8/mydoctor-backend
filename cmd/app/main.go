@@ -47,7 +47,7 @@ func main() {
 		fRepo := repositories.NewFacilityRepository(db)
 
 		// Fetch a facility from the repository
-		f, err := fRepo.Find(130)
+		f, err := fRepo.Find(1)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Facility not found"})
 			return

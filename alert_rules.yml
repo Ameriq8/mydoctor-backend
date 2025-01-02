@@ -1,0 +1,33 @@
+groups:
+  - name: QueryPerformanceAlerts
+    rules:
+      # Alert if query duration is consistently high
+      - alert: HighQueryLatency
+        expr: histogram_quantile(0.95, rate(facilities_query_duration_seconds_bucket[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High query latency detected"
+          description: "The 95th percentile query latency for facilities is above 500ms for the last 2 minutes."
+
+      # Alert if query error rate exceeds 5%
+      - alert: HighQueryErrorRate
+        expr: (sum(rate(facilities_query_total{status="failure"}[5m])) /
+               sum(rate(facilities_query_total[5m]))) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High query error rate detected"
+          description: "The error rate for facilities queries is above 5% for the last 5 minutes."
+
+      # Alert if in-flight queries are unusually high
+      - alert: HighInFlightQueries
+        expr: sum(facilities_in_flight_queries) > 50
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High in-flight query load detected"
+          description: "The number of in-flight queries for facilities has exceeded 50 for the last minute."
