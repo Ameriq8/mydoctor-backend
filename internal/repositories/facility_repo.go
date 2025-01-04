@@ -72,9 +72,13 @@ func (r *facilityRepository) Create(entity *models.Facility) (*models.Facility, 
 		return nil, err
 	}
 	defer rows.Close()
+
 	if rows.Next() {
-		rows.StructScan(entity)
+		if err := rows.StructScan(entity); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
 	}
+
 	trackMetrics("Create", "facilities", start, nil)
 	return entity, nil
 }

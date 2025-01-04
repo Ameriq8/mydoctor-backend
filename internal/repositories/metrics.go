@@ -36,7 +36,7 @@ func RegisterMetricsForTable(table string) *MetricsRegistry {
 	// Create and register new metrics for the table
 	queryDuration := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    fmt.Sprintf("%s_query_duration_seconds", table),
+			Name:    fmt.Sprintf("database_%s_query_duration_seconds", table),
 			Help:    fmt.Sprintf("Duration of queries on the %s table in seconds", table),
 			Buckets: customBuckets,
 		},
@@ -45,7 +45,7 @@ func RegisterMetricsForTable(table string) *MetricsRegistry {
 
 	queryTotal := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: fmt.Sprintf("%s_query_total", table),
+			Name: fmt.Sprintf("database_%s_query_total", table),
 			Help: fmt.Sprintf("Total number of queries executed on the %s table", table),
 		},
 		[]string{"operation", "status"},
@@ -53,7 +53,7 @@ func RegisterMetricsForTable(table string) *MetricsRegistry {
 
 	inFlightQueries := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: fmt.Sprintf("%s_in_flight_queries", table),
+			Name: fmt.Sprintf("database_%s_in_flight_queries", table),
 			Help: fmt.Sprintf("Number of in-flight queries on the %s table", table),
 		},
 		[]string{"operation"},

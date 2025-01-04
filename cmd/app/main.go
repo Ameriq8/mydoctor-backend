@@ -10,7 +10,10 @@ import (
 	"server/pkg/logger"
 	"server/pkg/middlewares"
 	pg "server/pkg/utils"
+	"time"
 
+	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/secure"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/gin-gonic/gin"
@@ -18,9 +21,13 @@ import (
 )
 
 func main() {
-	gin.SetMode(gin.DebugMode) // Set Gin to release mode
+	gin.SetMode(gin.ReleaseMode) // Set Gin to release mode for production
 	r := gin.Default()
-	r.SetTrustedProxies(nil) // Disables proxy trusting
+
+	// Error handling for SetTrustedProxies method
+	if err := r.SetTrustedProxies(nil); err != nil {
+		log.Fatalf("Error setting trusted proxies: %v", err)
+	}
 
 	logger.InitLogger("development")
 	defer logger.Sync()
@@ -31,14 +38,38 @@ func main() {
 		port = "8080"
 	}
 
+	// Setup CORS config & middleware
+	r.Use(cors.New(cors.Config{
+		AllowAllOrigins:  false, // Allow specific origins instead of all
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
+	// Add XSS Middleware for sanitizing input data
+	r.Use(middlewares.XSSMiddleware())
+
+	// Add the monitoring middleware for Prometheus metrics
+	r.Use(middlewares.MonitoringMiddleware())
+
+	// Add secure headers middleware for enhanced security
+	secureConfig := secure.New(secure.Config{
+		SSLRedirect:           true,                                                        // Force HTTPS
+		FrameDeny:             true,                                                        // Deny iframe embedding (Clickjacking)
+		ContentTypeNosniff:    true,                                                        // Prevent MIME type sniffing
+		BrowserXssFilter:      true,                                                        // Enable browser's XSS filter
+		ContentSecurityPolicy: "default-src 'self'; script-src 'self'; object-src 'none';", // Apply Content Security Policy (CSP)
+	})
+	r.Use(secureConfig)
+
+	// Database connection
 	db, err := pg.NewDB()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
-	// Add the monitoring middleware
-	r.Use(middlewares.MonitoringMiddleware())
 
 	// Expose Prometheus metrics at "/metrics"
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))

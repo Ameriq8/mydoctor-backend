@@ -11,7 +11,7 @@ import (
 
 var httpRequests = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
-		Name: "http_requests_total",
+		Name: "server_http_requests_total",
 		Help: "Total HTTP requests processed by the server",
 	},
 	[]string{"method", "endpoint", "status"},
@@ -19,7 +19,7 @@ var httpRequests = prometheus.NewCounterVec(
 
 var httpRequestDuration = prometheus.NewHistogramVec(
 	prometheus.HistogramOpts{
-		Name:    "http_request_duration_seconds",
+		Name:    "server_http_request_duration_seconds",
 		Help:    "Duration of HTTP requests in seconds",
 		Buckets: prometheus.DefBuckets,
 	},
@@ -28,7 +28,7 @@ var httpRequestDuration = prometheus.NewHistogramVec(
 
 var httpRequestSize = prometheus.NewHistogramVec(
 	prometheus.HistogramOpts{
-		Name:    "http_request_size_bytes",
+		Name:    "server_http_request_size_bytes",
 		Help:    "Size of HTTP requests in bytes",
 		Buckets: prometheus.ExponentialBuckets(100, 10, 6), // 100B to ~1MB
 	},
@@ -37,7 +37,7 @@ var httpRequestSize = prometheus.NewHistogramVec(
 
 var httpResponseSize = prometheus.NewHistogramVec(
 	prometheus.HistogramOpts{
-		Name:    "http_response_size_bytes",
+		Name:    "server_http_response_size_bytes",
 		Help:    "Size of HTTP responses in bytes",
 		Buckets: prometheus.ExponentialBuckets(100, 10, 6), // 100B to ~1MB
 	},
@@ -46,7 +46,7 @@ var httpResponseSize = prometheus.NewHistogramVec(
 
 var httpFailedRequests = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
-		Name: "http_failed_requests_total",
+		Name: "server_http_failed_requests_total",
 		Help: "Total HTTP requests that failed",
 	},
 	[]string{"method", "endpoint", "status"},
