@@ -405,3 +405,42 @@ FOR EACH ROW EXECUTE FUNCTION log_audit();
 CREATE TRIGGER audit_facility_plans
 AFTER INSERT OR UPDATE OR DELETE ON facility_plans
 FOR EACH ROW EXECUTE FUNCTION log_audit();
+
+-- ======================================
+-- 20) Create an enum type for appointment status
+-- ======================================
+-- This enum defines the valid statuses for an appointment.
+CREATE TYPE appointment_status AS ENUM (
+    'Scheduled',      -- Appointment is scheduled but not yet occurred.
+    'Completed',      -- Appointment has been completed.
+    'Cancelled',      -- Appointment has been cancelled by the patient or the facility.
+    'No-Show',        -- The patient did not show up for the appointment.
+    'Rescheduled'     -- The appointment has been rescheduled to a different time.
+);
+
+-- ======================================
+-- 21) Create facility_appointments table
+-- ======================================
+-- The 'facility_appointments' table stores information about appointments scheduled at facilities.
+-- It includes details about the patient, doctor, appointment time, and appointment status.
+CREATE TABLE facility_appointments (
+    id BIGSERIAL PRIMARY KEY,
+    patient_name VARCHAR(200) NOT NULL,
+    patient_contact VARCHAR(20),
+    facility_id BIGINT REFERENCES facilities(id),
+    doctor_id BIGINT REFERENCES doctors(id),
+    appointment_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    status appointment_status DEFAULT 'Scheduled',  -- Now using the enum type
+    reason_for_appointment TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ======================================
+-- 22) Create indexes for facility_appointments table
+-- ======================================
+-- Indexes improve query performance when searching for appointments by doctor, facility, or status.
+CREATE INDEX idx_facility_appointments_facility ON facility_appointments(facility_id);
+CREATE INDEX idx_facility_appointments_doctor ON facility_appointments(doctor_id);
+CREATE INDEX idx_facility_appointments_status ON facility_appointments(status);
+CREATE INDEX idx_facility_appointments_appointment_time ON facility_appointments(appointment_time);
