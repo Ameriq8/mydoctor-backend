@@ -1,6 +1,6 @@
 module server
 
-go 1.21.0
+go 1.23
 
 toolchain go1.23.3
 
@@ -12,6 +12,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/didip/tollbooth v4.0.2+incompatible // indirect
 	github.com/didip/tollbooth_gin v0.0.0-20170928041415-5752492be505 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.7 // indirect
@@ -22,6 +23,7 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.23.0 // indirect
+	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/goccy/go-json v0.10.4 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/jmoiron/sqlx v1.4.0 // indirect

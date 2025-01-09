@@ -19,11 +19,14 @@ services:
       - DB_NAME=mydoctor
       - DB_SSLMODE=disable
       - DB_DRIVER=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     networks:
       - monitoring
     depends_on:
       - postgres
       - prometheus
+      - redis
 
   postgres:
     container_name: postgres
@@ -37,6 +40,15 @@ services:
       POSTGRES_DB: mydoctor
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - monitoring
+
+  redis:
+    container_name: redis
+    image: redis:6.2
+    restart: always
+    ports:
+      - "6379:6379"
     networks:
       - monitoring
 

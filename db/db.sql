@@ -444,3 +444,34 @@ CREATE INDEX idx_facility_appointments_facility ON facility_appointments(facilit
 CREATE INDEX idx_facility_appointments_doctor ON facility_appointments(doctor_id);
 CREATE INDEX idx_facility_appointments_status ON facility_appointments(status);
 CREATE INDEX idx_facility_appointments_appointment_time ON facility_appointments(appointment_time);
+
+CREATE TABLE verification_token
+(
+  id SERIAL NOT NULL,
+  expires TIMESTAMPTZ NOT NULL,
+  token TEXT NOT NULL,
+ 
+  PRIMARY KEY (identifier, token)
+);
+ 
+CREATE TABLE sessions
+(
+  id SERIAL,
+  "userId" INTEGER NOT NULL,
+  expires TIMESTAMPTZ NOT NULL,
+  "sessionToken" VARCHAR(255) NOT NULL,
+ 
+  PRIMARY KEY (id)
+);
+ 
+CREATE TABLE users
+(
+  id SERIAL,
+  name VARCHAR(255),
+  email VARCHAR(255),
+  "emailVerified" TIMESTAMPTZ,
+  image TEXT,
+ 
+  PRIMARY KEY (id)
+);
+ 
