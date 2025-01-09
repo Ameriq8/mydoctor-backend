@@ -10,6 +10,7 @@ import (
 type Services struct {
 	CityService     *services.CityService
 	FacilityService *services.FacilityService
+	AuthService     *services.AuthService // Add AuthService
 	// Add other services here as needed
 }
 
@@ -20,8 +21,10 @@ func RegisterHandlers(router *gin.Engine, services *Services) {
 	// Initialize handlers
 	cityHandler := NewCityHandler(services.CityService)
 	facilityHandler := NewFacilityHandler(services.FacilityService)
+	authHandler := NewAuthHandler(services.AuthService) // Initialize the AuthHandler
 
 	// Register routes
 	cityHandler.RegisterCityRoutes(api)
 	facilityHandler.RegisterFacilityRoutes(api)
+	authHandler.RegisterAuthRoutes(api)
 }

@@ -94,11 +94,13 @@ func main() {
 	// Initialize repositories
 	cityRepo := repositories.NewCitiesRepository(db)
 	facilityRepo := repositories.NewFacilityRepository(db)
+	authRepo := repositories.NewAuthRepository(db)
 
 	// Initialize services
 	serviceGroup := &handlers.Services{
 		CityService:     services.NewCityService(cityRepo),
 		FacilityService: services.NewFacilityService(facilityRepo),
+		AuthService:     services.NewAuthService(authRepo),
 	}
 
 	// Register handlers

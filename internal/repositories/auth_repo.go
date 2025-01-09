@@ -209,8 +209,8 @@ func (r *authRepository) CreateVerificationToken(token *models.VerificationToken
 	start := time.Now()
 
 	query := `
-		INSERT INTO verification_tokens (identifier, token, expires)
-		VALUES (:identifier, :token, :expires)
+		INSERT INTO verification_tokens (id, token, expires)
+		VALUES (:id, :token, :expires)
 		RETURNING *`
 
 	rows, err := r.db.NamedQuery(query, token)

@@ -51,7 +51,7 @@ func (h *AuthHandler) LoginUser(c *gin.Context) {
 	}
 
 	// Attempt to authenticate the user
-	user, err := h.service.AuthenticateUser(&req)
+	user, err := h.service.LoginUser(&req)
 	if err != nil {
 		if err.Error() == "invalid credentials" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})

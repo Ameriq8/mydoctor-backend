@@ -50,7 +50,8 @@ func (s *AuthService) CreateUser(user *validators.TRegisterRequest) (*models.Use
 }
 
 // AuthenticateUser validates the user's credentials (login)
-func (s *AuthService) AuthenticateUser(loginRequest *validators.TLoginRequest) (*models.User, error) {
+func (s *AuthService) LoginUser(loginRequest *validators.TLoginRequest) (*models.User, error) {
+	// If token is valid, continue to validate credentials
 	user, err := s.repo.GetUserByEmailOrPhone(loginRequest.Email)
 	if err != nil {
 		return nil, err
@@ -65,6 +66,7 @@ func (s *AuthService) AuthenticateUser(loginRequest *validators.TLoginRequest) (
 		return nil, errors.New("invalid credentials")
 	}
 
+	// If everything checks out, return the user details
 	return user, nil
 }
 
@@ -187,4 +189,40 @@ func mapModelToVerificationToken(token *models.VerificationToken) *validators.TV
 		Token:   token.Token,
 		Expires: token.Expires.Format(time.RFC3339),
 	}
+}
+
+// ValidateAuthToken validates a JWT token and returns the user ID if the token is valid.
+func (s *AuthService) ValidateAuthToken(tokenString string) (string, error) {
+	// Parse the token
+	secret := []byte("your_secret_key") // Replace with a secret key from config
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Ensure the token's signing method is valid
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return secret, nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// Validate the token
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		// Extract user ID (subject)
+		userID, ok := claims["sub"].(string)
+		if !ok {
+			return "", errors.New("invalid token claims")
+		}
+
+		// Check if the token is expired
+		if exp, ok := claims["exp"].(float64); ok {
+			if time.Unix(int64(exp), 0).Before(time.Now()) {
+				return "", errors.New("token has expired")
+			}
+		}
+
+		return userID, nil
+	}
+
+	return "", errors.New("invalid token")
 }
