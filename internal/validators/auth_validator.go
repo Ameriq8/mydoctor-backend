@@ -2,7 +2,7 @@ package validators
 
 import (
 	"server/internal/models"
-	"server/pkg/middlewares"
+	"server/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,10 +23,10 @@ type TVerificationToken struct {
 
 // TRegisterRequest represents the structure for registration requests
 type TRegisterRequest struct {
-	Name        string `json:"name" db:"name"`
-	Email       string `json:"email" binding:"omitempty,email"`
-	PhoneNumber string `json:"phone_number" binding:"omitempty,phone"`
-	Password    string `json:"password" binding:"required"`
+	Name        string `json:"name" binding:"required"`
+	Email       string `json:"email" binding:"required,email"`
+	PhoneNumber string `json:"phone_number"`
+	Password    string `json:"password" binding:"required,min=8"`
 }
 
 // TLoginRequest represents the structure for login requests
@@ -38,15 +38,15 @@ type TLoginRequest struct {
 
 // ValidateAdapterUser validates a user request
 func ValidateAdapterUser(c *gin.Context, user models.User) {
-	middlewares.ValidateRequest(c, user)
+	utils.ValidateRequest(c, user)
 }
 
 // ValidateAdapterSession validates a session request
 func ValidateAdapterSession(c *gin.Context, session TSession) {
-	middlewares.ValidateRequest(c, session)
+	utils.ValidateRequest(c, session)
 }
 
 // ValidateVerificationToken validates a verification token request
 func ValidateVerificationToken(c *gin.Context, token TVerificationToken) {
-	middlewares.ValidateRequest(c, token)
+	utils.ValidateRequest(c, token)
 }

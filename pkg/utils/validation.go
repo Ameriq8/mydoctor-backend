@@ -1,8 +1,7 @@
-package middlewares
+package utils
 
 import (
 	"net/http"
-	"server/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -23,7 +22,7 @@ func ValidateRequest(c *gin.Context, structData interface{}) {
 		}
 
 		// Use the errorMessages in the response
-		c.JSON(http.StatusBadRequest, utils.StandardErrorResponse("Invalid request data", errorMessages))
+		c.JSON(http.StatusBadRequest, StandardErrorResponse("Invalid request data", errorMessages))
 		c.Abort()
 		return
 	}

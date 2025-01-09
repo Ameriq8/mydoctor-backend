@@ -1,7 +1,7 @@
 package validators
 
 import (
-	"server/pkg/middlewares"
+	"server/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,5 +17,5 @@ type FacilityRequest struct {
 // ValidateFacilityRequest validates the request body for creating or updating a facility.
 func ValidateFacilityRequest(c *gin.Context, facilityRequest FacilityRequest) {
 	// Use the ValidateRequest middleware to validate the request
-	middlewares.ValidateRequest(c, facilityRequest)
+	utils.ValidateRequest(c, facilityRequest)
 }
