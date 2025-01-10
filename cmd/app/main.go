@@ -52,6 +52,7 @@ func main() {
 
 	// Add the monitoring middleware for Prometheus metrics
 	r.Use(middlewares.MonitoringMiddleware())
+	r.Use(middlewares.Logging())
 
 	// Add secure headers middleware for enhanced security
 	// secureConfig := secure.New(secure.Config{

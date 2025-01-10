@@ -28,7 +28,7 @@ CREATE TYPE facility_type AS ENUM (
 -- The 'facility_categories' table is used to organize facilities into categories. 
 -- Each category can have a parent category, allowing for hierarchical organization.
 CREATE TABLE facility_categories (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     description TEXT,
     parent_id BIGINT REFERENCES facility_categories(id),
@@ -43,7 +43,7 @@ CREATE TABLE facility_categories (
 -- This includes geographic data, population, and timezone, allowing facilities
 -- to be linked to their respective cities for better organization and filtering.
 CREATE TABLE cities (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     population INTEGER,
     image_url VARCHAR(255),
@@ -60,7 +60,7 @@ CREATE TABLE cities (
 -- The 'coordinates' field stores geographical data for mapping purposes, while
 -- the 'meta_data' field is used for storing additional customizable information.
 CREATE TABLE facilities (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
     type facility_type NOT NULL,
     category_id BIGINT REFERENCES facility_categories(id),
@@ -94,7 +94,7 @@ CREATE TABLE facilities (
 -- It includes fields for name, specialty, primary facility, and contact information.
 -- Linking doctors to primary facilities helps manage staff assignments effectively.
 CREATE TABLE doctors (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
     specialty VARCHAR(100),
     primary_facility_id BIGINT REFERENCES facilities(id),
@@ -111,7 +111,7 @@ CREATE TABLE doctors (
 -- It includes a generic reference via 'entity_type' and 'entity_id', allowing flexibility
 -- to associate reviews with various types of entities in the system.
 CREATE TABLE reviews (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     entity_type VARCHAR(50) NOT NULL,
     entity_id BIGINT NOT NULL,
     user_id BIGINT,
@@ -128,7 +128,7 @@ CREATE TABLE reviews (
 -- It links to a facility and can have details about the head doctor and floor location.
 -- This table is essential for managing organizational units and department-specific data.
 CREATE TABLE facility_departments (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     facility_id BIGINT REFERENCES facilities(id),
     name VARCHAR(100) NOT NULL,
     description TEXT,
@@ -147,7 +147,7 @@ CREATE TABLE facility_departments (
 -- Maintenance tracking fields like 'last_maintenance_date' and 'next_maintenance_date'
 -- ensure that equipment is properly maintained to avoid downtime.
 CREATE TABLE facility_equipment (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     facility_id BIGINT REFERENCES facilities(id),
     department_id BIGINT REFERENCES facility_departments(id),
     name VARCHAR(200) NOT NULL,
@@ -167,7 +167,7 @@ CREATE TABLE facility_equipment (
 -- The 'facility_operating_hours' table specifies operating hours for facilities or their departments.
 -- Days of the week are represented numerically (0=Sunday, 6=Saturday), making it easier to standardize schedules.
 CREATE TABLE facility_operating_hours (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     facility_id BIGINT REFERENCES facilities(id),
     department_id BIGINT REFERENCES facility_departments(id),
     day_of_week SMALLINT CHECK (day_of_week BETWEEN 0 AND 6),
@@ -199,7 +199,7 @@ CREATE TABLE facility_insurance_providers (
 -- The 'facility_certifications' table tracks certifications awarded to facilities.
 -- It includes fields for issuing authority, validity dates, and document URLs.
 CREATE TABLE facility_certifications (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     facility_id BIGINT REFERENCES facilities(id),
     name VARCHAR(200) NOT NULL,
     issuing_authority VARCHAR(200),
@@ -276,7 +276,7 @@ FOR EACH STATEMENT EXECUTE FUNCTION refresh_facility_stats();
 -- ======================================
 -- The 'audit_log' table records changes to key tables for auditing purposes.
 CREATE TABLE audit_log (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     table_name VARCHAR(50),
     operation VARCHAR(10),
     old_data JSONB,
@@ -337,7 +337,7 @@ FOR EACH ROW EXECUTE FUNCTION log_audit();
 -- Each plan includes pricing, a description, and a set of features.
 -- This table is key for implementing subscription tiers or service levels.
 CREATE TABLE plans (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
     monthly_price DECIMAL(10, 2) NOT NULL,
     yearly_price DECIMAL(10, 2) NOT NULL,
@@ -382,7 +382,7 @@ VALUES
 -- The 'facility_plans' table links facilities to subscription plans.
 -- It tracks the start and end dates for the plan as well as its activation status.
 CREATE TABLE facility_plans (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     facility_id BIGINT REFERENCES facilities(id) ON DELETE CASCADE,
     plan_id BIGINT REFERENCES plans(id) ON DELETE CASCADE,
     start_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -424,7 +424,7 @@ CREATE TYPE appointment_status AS ENUM (
 -- The 'facility_appointments' table stores information about appointments scheduled at facilities.
 -- It includes details about the patient, doctor, appointment time, and appointment status.
 CREATE TABLE facility_appointments (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     patient_name VARCHAR(200) NOT NULL,
     patient_contact VARCHAR(20),
     facility_id BIGINT REFERENCES facilities(id),
@@ -445,33 +445,41 @@ CREATE INDEX idx_facility_appointments_doctor ON facility_appointments(doctor_id
 CREATE INDEX idx_facility_appointments_status ON facility_appointments(status);
 CREATE INDEX idx_facility_appointments_appointment_time ON facility_appointments(appointment_time);
 
-CREATE TABLE verification_token
+-- ======================================
+-- 23) Create users
+-- ======================================
+-- The 'users' table stores user information for the system.
+CREATE TABLE users
 (
-  id SERIAL NOT NULL,
-  expires TIMESTAMPTZ NOT NULL,
-  token TEXT NOT NULL,
- 
-  PRIMARY KEY (identifier, token)
+  id BIGINT PRIMARY KEY,
+  name VARCHAR(255) ,
+  email VARCHAR(255) DEFAULT NULL,
+  phone_number VARCHAR(20) DEFAULT NULL,
+  password VARCHAR(255),
+  email_verified TIMESTAMPTZ,
+  image TEXT,
 );
- 
+
+-- ======================================
+-- 24) Create sessions
+-- ======================================
+-- The 'sessions' table manages user session data for authentication and tracking.
 CREATE TABLE sessions
 (
-  id SERIAL,
+  id BIGINT PRIMARY KEY,
   "userId" INTEGER NOT NULL,
   expires TIMESTAMPTZ NOT NULL,
   "sessionToken" VARCHAR(255) NOT NULL,
- 
-  PRIMARY KEY (id)
 );
- 
-CREATE TABLE users
-(
-  id SERIAL,
-  name VARCHAR(255),
-  email VARCHAR(255),
-  "emailVerified" TIMESTAMPTZ,
-  image TEXT,
- 
-  PRIMARY KEY (id)
+
+-- ======================================
+-- 25) Create verification_token table
+-- ======================================
+-- The 'verification_token' table stores tokens for verifying user identities or actions.
+-- It includes details about the token, expiration time, and an associated identifier.
+CREATE TABLE verification_token (
+    id BIGINT NOT NULL,
+    token TEXT NOT NULL,
+    expires TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (identifier, token)
 );
- 

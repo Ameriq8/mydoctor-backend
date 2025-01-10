@@ -189,7 +189,6 @@ func (r *authRepository) GetSessionAndUser(sessionToken string) (*models.Session
 		return nil, nil, err
 	}
 
-	session.User = user
 	trackMetrics("GetSessionAndUser", "sessions", start, nil)
 	return &session, &user, nil
 }

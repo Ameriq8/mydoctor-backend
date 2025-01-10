@@ -11,7 +11,6 @@ type User struct {
 	Password      string    `json:"password" db:"password"`
 	EmailVerified time.Time `json:"email_verified" db:"email_verified"`
 	Image         string    `json:"image" db:"image"`
-	Sessions      []Session `json:"sessions"`
 }
 
 // Session represents a session for a user
@@ -20,13 +19,11 @@ type Session struct {
 	UserID       int       `json:"user_id" db:"user_id"`
 	Expires      time.Time `json:"expires" db:"expires"`
 	SessionToken string    `json:"session_token" db:"session_token"`
-	User         User      `json:"user"`
 }
 
 // VerificationToken represents a token for verifying user actions
 type VerificationToken struct {
 	BaseModel
-	ID      int64     `json:"id" db:"id"`
 	Expires time.Time `json:"expires" db:"expires"`
 	Token   string    `json:"token" db:"token"`
 }
