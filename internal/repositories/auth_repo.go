@@ -39,8 +39,8 @@ func (r *authRepository) CreateUser(user *models.User) (*models.User, error) {
 	start := time.Now()
 
 	query := `
-		INSERT INTO users (name, email, phone_number, image, email_verified)
-		VALUES (:name, :email, :phone_number, :image, :email_verified)
+		INSERT INTO users (name, email, phone_number, image, password, email_verified)
+		VALUES (:name, :email, :phone_number, :image, :password, :email_verified)
 		RETURNING *`
 
 	rows, err := r.db.NamedQuery(query, user)

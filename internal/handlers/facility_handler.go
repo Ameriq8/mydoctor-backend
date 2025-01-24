@@ -58,7 +58,12 @@ func (h *FacilityHandler) RegisterFacilityRoutes(r *gin.RouterGroup) {
 
 // CRUD Operations
 func (h *FacilityHandler) GetAllFacilities(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message": "All facilities fetched successfully"})
+	facilities, err := h.service.GetAllFacilities()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	c.JSON(http.StatusOK, facilities)
 }
 
 func (h *FacilityHandler) GetFacilityByID(c *gin.Context) {

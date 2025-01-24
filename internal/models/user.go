@@ -5,12 +5,12 @@ import "time"
 // User represents the user model
 type User struct {
 	BaseModel
-	Name          string    `json:"name" db:"name"`
-	Email         string    `json:"email" db:"email"`
-	PhoneNumber   *string   `json:"phone_number" db:"phone_number"`
-	Password      string    `json:"password" db:"password"`
-	EmailVerified time.Time `json:"email_verified" db:"email_verified"`
-	Image         string    `json:"image" db:"image"`
+	Name          string     `json:"name" db:"name"`
+	Email         string     `json:"email" db:"email"`
+	PhoneNumber   *string    `json:"phone_number" db:"phone_number"`
+	Password      string     `json:"password" db:"password"`
+	EmailVerified *time.Time `json:"email_verified" db:"email_verified"`
+	Image         string     `json:"image" db:"image"`
 }
 
 // Session represents a session for a user

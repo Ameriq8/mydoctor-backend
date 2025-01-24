@@ -449,27 +449,28 @@ CREATE INDEX idx_facility_appointments_appointment_time ON facility_appointments
 -- 23) Create users
 -- ======================================
 -- The 'users' table stores user information for the system.
-CREATE TABLE users
-(
-  id BIGINT PRIMARY KEY,
-  name VARCHAR(255) ,
-  email VARCHAR(255) DEFAULT NULL,
-  phone_number VARCHAR(20) DEFAULT NULL,
-  password VARCHAR(255),
-  email_verified TIMESTAMPTZ,
-  image TEXT,
+CREATE TABLE users (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(255),
+    email VARCHAR(255) DEFAULT NULL,
+    phone_number VARCHAR(20) DEFAULT NULL,
+    password VARCHAR(255),
+    email_verified TIMESTAMPTZ DEFAULT NULL,
+    image TEXT
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ======================================
 -- 24) Create sessions
 -- ======================================
 -- The 'sessions' table manages user session data for authentication and tracking.
-CREATE TABLE sessions
-(
-  id BIGINT PRIMARY KEY,
-  "userId" INTEGER NOT NULL,
-  expires TIMESTAMPTZ NOT NULL,
-  "sessionToken" VARCHAR(255) NOT NULL,
+CREATE TABLE sessions (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    "userId" BIGINT NOT NULL,
+    expires TIMESTAMPTZ NOT NULL,
+    "sessionToken" VARCHAR(255) NOT NULL,
+    CONSTRAINT fk_user FOREIGN KEY ("userId") REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- ======================================
@@ -478,8 +479,7 @@ CREATE TABLE sessions
 -- The 'verification_token' table stores tokens for verifying user identities or actions.
 -- It includes details about the token, expiration time, and an associated identifier.
 CREATE TABLE verification_token (
-    id BIGINT NOT NULL,
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     token TEXT NOT NULL,
-    expires TIMESTAMPTZ NOT NULL,
-    PRIMARY KEY (identifier, token)
+    expires TIMESTAMPTZ NOT NULL
 );
